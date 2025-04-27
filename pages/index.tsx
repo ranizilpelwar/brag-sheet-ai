@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
+import Spinner from "./components/Spinner";
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -7,17 +8,20 @@ export default function Home() {
   const [docId, setDocId] = useState<string>("");
   const [items, setItems] = useState<string[]>([]);
   const [docRetrieved, setDocRetrieved] = useState<boolean>(false);
+  const [fetchingDoc, setFetchingDoc] = useState<boolean>(false); // <-- NEW loading state
   const [result, setResult] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
   const extractDocId = (url: string): string | null => {
-    // Safe parsing with RegExp
     const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
     return match ? match[1] : null;
   };
 
   const fetchDoc = async (docId: string) => {
     try {
+      setFetchingDoc(true); // Start loading spinner
+      setDocRetrieved(false); // Clear previous success
+
       const res = await fetch(
         `/api/fetch-doc?docId=${encodeURIComponent(docId)}`,
         {
@@ -36,6 +40,8 @@ export default function Home() {
       }
     } catch (error) {
       console.error("Failed to fetch document:", error);
+    } finally {
+      setFetchingDoc(false); // Always stop loading spinner
     }
   };
 
@@ -108,7 +114,9 @@ export default function Home() {
         </button>
       </div>
 
-      {docRetrieved && (
+      {fetchingDoc && <Spinner />}
+
+      {!fetchingDoc && docRetrieved && (
         <p style={{ color: "green", marginTop: 20 }}>
           ✅ Google Doc retrieved successfully!
         </p>
