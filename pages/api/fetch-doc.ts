@@ -13,6 +13,7 @@ export default async function handler(
   };
 
   if (!session || !session.accessToken) {
+    console.error("Unauthorized: Missing session or accessToken");
     return res
       .status(401)
       .json({ error: "Unauthorized: No session or access token" });
