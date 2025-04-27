@@ -130,11 +130,7 @@ export default function Home() {
         {loading ? "✨ Generating..." : "✨ Generate Polished Output"}
       </button>
 
-      {loading && (
-        <div style={{ marginTop: 20 }}>
-          <p>⏳ Please wait while the AI generates...</p>
-        </div>
-      )}
+      {loading && <Spinner label="✨ Generating AI output..." />}
 
       {result && !loading && (
         <div style={{ marginTop: 30 }}>

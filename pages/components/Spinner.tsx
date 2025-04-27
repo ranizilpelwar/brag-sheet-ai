@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function Spinner() {
+export default function Spinner({ label = "Loading..." }: { label?: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", marginTop: 20 }}>
       <div
@@ -23,7 +23,7 @@ export default function Spinner() {
           }
         }
       `}</style>
-      <span style={{ marginLeft: 10 }}>Loading document...</span>
+      <span style={{ marginLeft: 10 }}>{label}</span>
     </div>
   );
 }
