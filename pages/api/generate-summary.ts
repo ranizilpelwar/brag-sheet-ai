@@ -21,31 +21,33 @@ export default async function handler(req, res) {
   const prompt = `
 You are a technical resume reviewer for Staff and Tech Lead roles.
 
-Your task is to create a concise factual summary of the following section from a brag sheet.
+Your task is to analyze the following section from a brag sheet and identify the single most impactful accomplishment that would be most compelling to an engineering manager.
 
 Input section:
 ${section}
 
 Instructions:
 1. Read the input section carefully
-2. Create a factual summary that captures the key points from the input
-3. Focus on:
-   - What was actually built or delivered
-   - Specific technical details mentioned
-   - Any metrics or results provided
-4. Do not:
-   - Add information not present in the input
-   - Make assumptions about impact
-   - Exaggerate or embellish details
-5. If the input is empty or unclear, respond with "No clear technical details found in the input"
+2. Identify the ONE accomplishment that best demonstrates these four key attributes:
+   - Quantifiable Business Impact: Measurable improvements in revenue, cost savings, efficiency, or user metrics
+   - Ownership and Initiative: Taking charge of critical projects, driving solutions, and making key decisions
+   - Impact Across Teams/Systems: Projects that affected multiple teams, systems, or business units
+   - High-Stakes Delivery: Successfully delivering complex, high-risk, or mission-critical projects
+3. If multiple accomplishments are present, choose the one that best demonstrates all attributes
+4. If no clear accomplishment is found, respond with "No clear technical accomplishments found in the input"
 
 Output requirements:
 - Write 1-2 sentences maximum
-- Use only information present in the input
-- Maintain the factual nature of the original content
+- Focus on the accomplishment that best demonstrates all attributes
+- Include specific metrics or results if available
 - Use professional, confident language
+- Do not make up or exaggerate details
+- Do not combine multiple accomplishments
 
-Now, create a factual summary of the input:
+Example format:
+"Led [specific initiative] that [specific impact], resulting in [quantifiable outcome] and [broader business impact]."
+
+Now, identify the single most impactful accomplishment that best demonstrates as many of the four key attributes as possible:
 `;
 
   console.log("📝 Prompt being sent to model:", prompt);
