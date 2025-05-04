@@ -3,6 +3,14 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import Spinner from "./components/Spinner";
 import { staticInstructions } from "../utils/buildPrompt";
 import fs from "fs";
+import { SUPPORTED_MODELS } from "../llm/providers";
+
+interface ModelOutput {
+  model: string;
+  output: string;
+  timestamp: string;
+  elapsedTime: string;
+}
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -18,6 +26,8 @@ export default function Home() {
   const [elapsedTime, setElapsedTime] = useState<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string>("mistral");
+  const [modelOutputs, setModelOutputs] = useState<ModelOutput[]>([]);
 
   const extractDocId = (url: string): string | null => {
     const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -68,7 +78,8 @@ export default function Home() {
   const generate = async () => {
     try {
       setLoading(true);
-      setResult(null);
+      setErrorMessage(null);
+      setElapsedTime(0);
 
       // Find the "Delivery Wins / What You Built" section
       const deliveryWinsIndex = items.findIndex(
@@ -96,13 +107,14 @@ export default function Home() {
         setElapsedTime((prev) => prev + 1);
       }, 1000);
 
-      // Generate summary using Ollama
+      // Generate summary using selected model
       const res = await fetch("/api/generate-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           section: deliveryWinsSection,
-          provider: "ollama"
+          provider: "litellm",
+          model: selectedModel
         })
       });
 
@@ -112,6 +124,20 @@ export default function Home() {
         throw new Error(data.error || "Failed to generate summary");
       }
 
+      // Format elapsed time
+      const minutes = Math.floor(elapsedTime / 60);
+      const seconds = elapsedTime % 60;
+      const formattedTime = `${minutes}m ${seconds}s`;
+
+      // Add new output to the list
+      const newOutput: ModelOutput = {
+        model: selectedModel,
+        output: data.output,
+        timestamp: new Date().toLocaleTimeString(),
+        elapsedTime: formattedTime
+      };
+
+      setModelOutputs((prev) => [...prev, newOutput]);
       setResult(data.output);
     } catch (error: any) {
       console.error("Generation error:", error.message);
@@ -122,6 +148,12 @@ export default function Home() {
         clearInterval(timerRef.current);
       }
     }
+  };
+
+  const clearOutputs = () => {
+    setModelOutputs([]);
+    setResult(null);
+    setErrorMessage(null);
   };
 
   if (status === "loading") {
@@ -166,36 +198,104 @@ export default function Home() {
         </p>
       )}
 
-      <button
-        onClick={generate}
-        style={{ marginTop: 40 }}
-        disabled={!docRetrieved || loading}
-      >
-        {loading ? "✨ Generating..." : "✨ Generate Polished Output"}
-      </button>
+      <div style={{ marginTop: 20 }}>
+        <label
+          htmlFor="model-select"
+          style={{ display: "block", marginBottom: 8 }}
+        >
+          Select Model:
+        </label>
+        <select
+          id="model-select"
+          value={selectedModel}
+          onChange={(e) => setSelectedModel(e.target.value)}
+          style={{ padding: 8, width: "100%" }}
+        >
+          {Object.entries(SUPPORTED_MODELS).map(([key, description]) => (
+            <option key={key} value={key}>
+              {key} - {description}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
+        <button
+          onClick={generate}
+          disabled={!docRetrieved || loading}
+          style={{ flex: 1 }}
+        >
+          {loading ? "✨ Generating..." : "✨ Generate with Selected Model"}
+        </button>
+
+        <button
+          onClick={clearOutputs}
+          disabled={loading || modelOutputs.length === 0}
+          style={{
+            backgroundColor: "#ff4444",
+            color: "white",
+            border: "none",
+            padding: "8px 16px",
+            borderRadius: "4px"
+          }}
+        >
+          🗑️ Clear All Outputs
+        </button>
+      </div>
 
       {loading && <Spinner label="✨ Generating AI output..." />}
       {loading && (
         <div style={{ marginTop: 20 }}>
-          {batchProgress > 0 && (
-            <p>
-              ⏳ Processing batch {batchProgress} of {totalBatches}...
-            </p>
-          )}
-          {batchProgress === 0 && <p>⏳ Preparing generation...</p>}
           <p style={{ marginTop: 10 }}>
             ⏱️ Elapsed Time: {Math.floor(elapsedTime / 60)}m {elapsedTime % 60}s
           </p>
-          {errorMessage && (
-            <p style={{ color: "red", marginTop: 20 }}>{errorMessage}</p>
-          )}
         </div>
       )}
 
-      {result && !loading && (
+      {errorMessage && (
+        <p style={{ color: "red", marginTop: 20 }}>{errorMessage}</p>
+      )}
+
+      {modelOutputs.length > 0 && (
         <div style={{ marginTop: 30 }}>
-          <h2>AI Output:</h2>
-          <pre>{result}</pre>
+          <h2>Model Outputs:</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {modelOutputs.map((output, index) => (
+              <div
+                key={index}
+                style={{
+                  padding: 20,
+                  borderRadius: 8,
+                  backgroundColor: "#f5f5f5",
+                  border: "1px solid #ddd"
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 10,
+                    color: "#666"
+                  }}
+                >
+                  <strong>🤖 {output.model}</strong>
+                  <div style={{ display: "flex", gap: 15 }}>
+                    <span>⏰ {output.timestamp}</span>
+                    <span>⏱️ {output.elapsedTime}</span>
+                  </div>
+                </div>
+                <pre
+                  style={{
+                    margin: 0,
+                    whiteSpace: "pre-wrap",
+                    wordWrap: "break-word"
+                  }}
+                >
+                  {output.output}
+                </pre>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </main>

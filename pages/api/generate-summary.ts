@@ -1,11 +1,21 @@
-import { getLLMClient } from "../../llm/providers";
+import { getLLMClient, SUPPORTED_MODELS } from "../../llm/providers";
 
 export default async function handler(req, res) {
-  const { section, provider = "ollama" } = req.body;
+  const { section, provider = "litellm", model = "mistral" } = req.body;
+
+  // Validate model
+  if (!Object.keys(SUPPORTED_MODELS).includes(model)) {
+    return res.status(400).json({
+      error: `Unsupported model. Available models: ${Object.keys(
+        SUPPORTED_MODELS
+      ).join(", ")}`
+    });
+  }
 
   console.log("🔍 Input section:", section);
   console.log("📝 Section length:", section.length);
   console.log("📝 Section preview:", section.substring(0, 200) + "...");
+  console.log("🤖 Using model:", model);
 
   const llm = getLLMClient(provider);
   const prompt = `
@@ -41,14 +51,14 @@ Example format:
 Now, analyze the input and provide the most impactful accomplishment:
 `;
 
-  console.log("📝 Prompt being sent to Ollama:", prompt);
+  console.log("📝 Prompt being sent to model:", prompt);
 
   const output = await llm.generate({
     prompt,
-    model: "mistral"
+    model
   });
 
-  console.log("📝 Raw output from Ollama:", output);
+  console.log("📝 Raw output from model:", output);
 
   res.status(200).json({ output });
 }
