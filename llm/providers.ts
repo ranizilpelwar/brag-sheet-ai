@@ -5,13 +5,13 @@ interface LLMClient {
 // Model-specific configurations
 const MODEL_CONFIGS = {
   mistral: {
-    temperature: 0.7,
-    top_p: 0.9,
+    temperature: 0.5, // Slightly higher temperature for better context understanding
+    top_p: 0.9, // Higher top_p for better language modeling
     max_tokens: 200
   },
   llama2: {
-    temperature: 0.8, // Slightly more creative
-    top_p: 0.95, // More diverse outputs
+    temperature: 0.5, // Slightly higher temperature for better context understanding
+    top_p: 0.9, // Higher top_p for better language modeling
     max_tokens: 200
   }
 };

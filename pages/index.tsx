@@ -75,31 +75,58 @@ export default function Home() {
     return Math.ceil(text.length / 4);
   };
   const staticInstructionTokenEstimate = estimateTokens(staticInstructions);
+  const extractDeliveryWinsSection = (text: string) => {
+    // Split the text into paragraphs
+    const paragraphs = text.split("\n");
+    let foundSection = false;
+    let sectionContent: string[] = [];
+
+    for (let i = 0; i < paragraphs.length; i++) {
+      const paragraph = paragraphs[i];
+
+      // Check if this is the start of our target section
+      if (paragraph.toLowerCase().includes("delivery wins / what you built")) {
+        foundSection = true;
+        continue;
+      }
+
+      // If we found our section and hit the next heading, stop
+      if (
+        foundSection &&
+        paragraph.toLowerCase().includes("consulting wins / how you influenced")
+      ) {
+        break;
+      }
+
+      // If we're in our target section, collect the content
+      if (foundSection && paragraph.trim()) {
+        sectionContent.push(paragraph);
+      }
+    }
+
+    if (!foundSection) {
+      console.log("❌ Could not find 'Delivery Wins / What You Built' section");
+      return "";
+    }
+
+    const content = sectionContent.join("\n").trim();
+    console.log("📋 Extracted Delivery Wins Section:", content);
+    return content;
+  };
   const generate = async () => {
     try {
       setLoading(true);
       setErrorMessage(null);
       setElapsedTime(0);
 
-      // Find the "Delivery Wins / What You Built" section
-      const deliveryWinsIndex = items.findIndex(
-        (item) =>
-          item.toLowerCase().includes("delivery wins") ||
-          item.toLowerCase().includes("what you built")
-      );
+      // Extract the delivery wins section from all items
+      const deliveryWinsSection = extractDeliveryWinsSection(items.join("\n"));
 
-      console.log("🔍 All items:", items);
-      console.log("🔍 Found section at index:", deliveryWinsIndex);
-
-      if (deliveryWinsIndex === -1) {
+      if (!deliveryWinsSection) {
         throw new Error(
           "Could not find 'Delivery Wins / What You Built' section in the document"
         );
       }
-
-      // Get the section content
-      const deliveryWinsSection = items[deliveryWinsIndex];
-      console.log("🔍 Extracted section content:", deliveryWinsSection);
 
       // Start stopwatch
       setElapsedTime(0);
