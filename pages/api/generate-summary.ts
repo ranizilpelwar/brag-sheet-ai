@@ -33,21 +33,24 @@ Instructions:
    - Ownership and Initiative: Taking charge of critical projects, driving solutions, and making key decisions
    - Impact Across Teams/Systems: Projects that affected multiple teams, systems, or business units
    - High-Stakes Delivery: Successfully delivering complex, high-risk, or mission-critical projects
-3. If multiple accomplishments are present, choose the one that best demonstrates all attributes
+3. If multiple accomplishments are present, choose the one that best demonstrates as many attributes as possible
 4. If no clear accomplishment is found, respond with "No clear technical accomplishments found in the input"
 
 Output requirements:
-- Write 1-2 sentences maximum
-- Focus on the accomplishment that best demonstrates all attributes
+- Write in SBI (Situation-Behavior-Impact) format:
+  - Situation: Brief context of the challenge or opportunity
+  - Behavior: Specific actions taken to address the situation
+  - Impact: Measurable results and broader business value
+- Focus on the accomplishment that best demonstrates key attributes
 - Include specific metrics or results if available
 - Use professional, confident language
 - Do not make up or exaggerate details
 - Do not combine multiple accomplishments
 
 Example format:
-"Led [specific initiative] that [specific impact], resulting in [quantifiable outcome] and [broader business impact]."
+"Situation: [context of challenge/opportunity]. Behavior: [specific actions taken]. Impact: [quantifiable results and broader business value]."
 
-Now, identify the single most impactful accomplishment that best demonstrates as many of the four key attributes as possible:
+Now, identify the single most impactful accomplishment that best demonstrates as many of the four key attributes as possible, using the SBI format:
 `;
 
   console.log("📝 Prompt being sent to model:", prompt);
