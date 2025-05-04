@@ -70,15 +70,25 @@ export default function Home() {
       setLoading(true);
       setResult(null);
 
-      // Break items into chunks
-      const chunkSize = 8;
-      const batches = [];
-      for (let i = 0; i < items.length; i += chunkSize) {
-        batches.push(items.slice(i, i + chunkSize));
+      // Find the "Delivery Wins / What You Built" section
+      const deliveryWinsIndex = items.findIndex(
+        (item) =>
+          item.toLowerCase().includes("delivery wins") ||
+          item.toLowerCase().includes("what you built")
+      );
+
+      console.log("🔍 All items:", items);
+      console.log("🔍 Found section at index:", deliveryWinsIndex);
+
+      if (deliveryWinsIndex === -1) {
+        throw new Error(
+          "Could not find 'Delivery Wins / What You Built' section in the document"
+        );
       }
 
-      setTotalBatches(batches.length);
-      setBatchProgress(0);
+      // Get the section content
+      const deliveryWinsSection = items[deliveryWinsIndex];
+      console.log("🔍 Extracted section content:", deliveryWinsSection);
 
       // Start stopwatch
       setElapsedTime(0);
@@ -86,75 +96,28 @@ export default function Home() {
         setElapsedTime((prev) => prev + 1);
       }, 1000);
 
-      let batchSummaries: string[] = [];
-
-      // Process each batch sequentially
-      for (let i = 0; i < batches.length; i++) {
-        setBatchProgress(i + 1); // Update current batch number
-        const batchText = batches[i].join("\n");
-        const tokenEstimate = estimateTokens(batchText);
-        if (tokenEstimate > 3000) {
-          // Safe margin under 8192 total
-          console.warn(
-            `⚠️ Batch ${
-              i + 1
-            } is very large (${tokenEstimate} tokens)! Consider splitting further.`
-          );
-        }
-        const totalEstimatedTokens =
-          staticInstructionTokenEstimate + tokenEstimate;
-        console.log(
-          `📏 Batch ${i + 1} estimated total tokens: ${totalEstimatedTokens}`
-        );
-
-        const res = await fetch("/api/generate-single-batch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            items: batches[i],
-            tone: "Professional"
-          })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(
-            data.error || "Unknown error occurred during batch processing"
-          );
-        }
-
-        batchSummaries.push(data.output);
-      }
-
-      // After all batches are summarized, send them for final polish
-      const finalRes = await fetch("/api/generate-final-polish", {
+      // Generate summary using Ollama
+      const res = await fetch("/api/generate-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          summaries: batchSummaries,
-          tone: "Professional"
+          section: deliveryWinsSection,
+          provider: "ollama"
         })
       });
 
-      const finalData = await finalRes.json();
+      const data = await res.json();
 
-      if (!finalRes.ok) {
-        throw new Error(
-          finalData.error || "Unknown error occurred during final polish"
-        );
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to generate summary");
       }
 
-      setResult(finalData.output);
+      setResult(data.output);
     } catch (error: any) {
       console.error("Generation error:", error.message);
-      setErrorMessage(`❌ Final Error: ${error.message}`);
+      setErrorMessage(`❌ Error: ${error.message}`);
     } finally {
       setLoading(false);
-      setBatchProgress(0);
-      setTotalBatches(0);
-
-      // Stop stopwatch
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
