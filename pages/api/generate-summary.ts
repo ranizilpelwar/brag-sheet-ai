@@ -15,6 +15,11 @@ export const config = {
 export default async function handler(req, res) {
   const { section, provider = "litellm", model = "mistral" } = req.body;
 
+  // Validate input
+  if (!section || section.trim() === "") {
+    return res.status(400).json({ error: "Section content cannot be empty" });
+  }
+
   // Validate model
   if (!Object.keys(SUPPORTED_MODELS).includes(model)) {
     return res.status(400).json({

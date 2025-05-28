@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "types": ["next-auth"],
+    "types": ["next-auth", "jest", "node", "@testing-library/jest-dom"],
     "target": "ES2017",
     "lib": [
       "dom",
