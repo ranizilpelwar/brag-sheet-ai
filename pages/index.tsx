@@ -159,9 +159,11 @@ export default function Home() {
         timerRef.current = null;
       }
 
-      // Use the final elapsed time from state
-      const minutes = Math.floor(elapsedTime / 60);
-      const seconds = elapsedTime % 60;
+      // Calculate elapsed time directly to avoid stale state
+      const elapsedMs = Date.now() - startTime;
+      const elapsedSeconds = Math.floor(elapsedMs / 1000);
+      const minutes = Math.floor(elapsedSeconds / 60);
+      const seconds = elapsedSeconds % 60;
       const formattedTime = `${minutes}m ${seconds}s`;
 
       // Add new output to the list
