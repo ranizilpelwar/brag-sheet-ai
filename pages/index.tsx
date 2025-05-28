@@ -28,6 +28,8 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>("mistral");
   const [modelOutputs, setModelOutputs] = useState<ModelOutput[]>([]);
+  const [selectedSection, setSelectedSection] = useState<string>("");
+  const [headings, setHeadings] = useState<string[]>([]);
 
   const extractDocId = (url: string): string | null => {
     const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -51,6 +53,24 @@ export default function Home() {
 
       if (data.paragraphs && data.paragraphs.length > 0) {
         setItems(data.paragraphs);
+        console.log("Raw paragraphs:", data.paragraphs);
+        // Extract headings from paragraphs
+        const extractedHeadings = data.paragraphs
+          .filter((p: string) => {
+            const isHeading = p.toLowerCase().includes("heading");
+            console.log("Paragraph:", p, "Is heading:", isHeading);
+            return isHeading;
+          })
+          .map((p: string) => {
+            const cleaned = p.replace(/^heading \d+: /i, "").trim();
+            console.log("Original heading:", p, "Cleaned heading:", cleaned);
+            return cleaned;
+          });
+        console.log("extractedHeadings", extractedHeadings);
+        setHeadings(extractedHeadings);
+        if (extractedHeadings.length > 0) {
+          setSelectedSection(extractedHeadings[0]);
+        }
         setDocRetrieved(true);
       } else {
         console.error("No paragraphs found in document");
@@ -119,12 +139,15 @@ export default function Home() {
       setErrorMessage(null);
       setElapsedTime(0);
 
-      // Extract the delivery wins section from all items
-      const deliveryWinsSection = extractDeliveryWinsSection(items.join("\n"));
+      // Extract the selected section from all items
+      const selectedSectionContent = extractSectionContent(
+        items.join("\n"),
+        selectedSection
+      );
 
-      if (!deliveryWinsSection) {
+      if (!selectedSectionContent) {
         throw new Error(
-          "Could not find 'Delivery Wins / What You Built' section in the document"
+          `Could not find section "${selectedSection}" in the document`
         );
       }
 
@@ -141,7 +164,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          section: deliveryWinsSection,
+          section: selectedSectionContent,
           provider: "litellm",
           model: selectedModel
         })
@@ -190,6 +213,45 @@ export default function Home() {
     setErrorMessage(null);
   };
 
+  const extractSectionContent = (text: string, sectionName: string) => {
+    // Split the text into paragraphs
+    const paragraphs = text.split("\n");
+    let foundSection = false;
+    let sectionContent: string[] = [];
+
+    for (let i = 0; i < paragraphs.length; i++) {
+      const paragraph = paragraphs[i];
+
+      // Check if this is the start of our target section
+      if (paragraph.toLowerCase().includes(sectionName.toLowerCase())) {
+        foundSection = true;
+        continue;
+      }
+
+      // If we found our section and hit the next heading, stop
+      if (
+        foundSection &&
+        paragraphs[i + 1]?.toLowerCase().includes("heading")
+      ) {
+        break;
+      }
+
+      // If we're in our target section, collect the content
+      if (foundSection && paragraph.trim()) {
+        sectionContent.push(paragraph);
+      }
+    }
+
+    if (!foundSection) {
+      console.log(`❌ Could not find section "${sectionName}"`);
+      return "";
+    }
+
+    const content = sectionContent.join("\n").trim();
+    console.log(`📋 Extracted Section "${sectionName}":`, content);
+    return content;
+  };
+
   if (status === "loading") {
     return <p>Loading session...</p>;
   }
@@ -230,6 +292,29 @@ export default function Home() {
         <p style={{ color: "green", marginTop: 20 }}>
           ✅ Google Doc retrieved successfully!
         </p>
+      )}
+
+      {docRetrieved && headings.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <label
+            htmlFor="section-select"
+            style={{ display: "block", marginBottom: 8 }}
+          >
+            Select Section:
+          </label>
+          <select
+            id="section-select"
+            value={selectedSection}
+            onChange={(e) => setSelectedSection(e.target.value)}
+            style={{ padding: 8, width: "100%" }}
+          >
+            {headings.map((heading) => (
+              <option key={heading} value={heading}>
+                {heading}
+              </option>
+            ))}
+          </select>
+        </div>
       )}
 
       <div style={{ marginTop: 20 }}>

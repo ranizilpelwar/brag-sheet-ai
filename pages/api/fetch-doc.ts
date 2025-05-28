@@ -33,13 +33,27 @@ export default async function handler(
     const content = response.data.body?.content || [];
 
     const paragraphs = content
-      .map((item) =>
-        item.paragraph?.elements?.map((el) => el.textRun?.content).join("")
-      )
+      .map((item) => {
+        if (!item.paragraph) return null;
+
+        const text = item.paragraph.elements
+          ?.map((el) => el.textRun?.content)
+          .join("");
+        const style = item.paragraph.paragraphStyle?.namedStyleType;
+
+        // If it's a heading, prefix it with the heading level
+        if (style?.startsWith("HEADING_")) {
+          const level = style.replace("HEADING_", "");
+          return `heading ${level}: ${text}`;
+        }
+
+        return text;
+      })
       .filter(Boolean)
       .map((p) => p?.trim())
       .filter((p) => p && p.length > 1);
 
+    console.log("Processed paragraphs:", paragraphs);
     res.status(200).json({ paragraphs });
   } catch (error: any) {
     console.error("Error fetching document:", error.message);
