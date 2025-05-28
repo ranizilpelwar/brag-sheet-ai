@@ -3,7 +3,7 @@ import { screen, waitFor } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import Home from "../../pages/index";
 import { useSession } from "next-auth/react";
-import { act } from "react-dom/test-utils";
+import { act } from "react";
 
 beforeAll(() => {
   jest.spyOn(console, "log").mockImplementation(() => {});
