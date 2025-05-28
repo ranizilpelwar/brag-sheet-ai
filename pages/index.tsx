@@ -129,10 +129,12 @@ export default function Home() {
       }
 
       // Start stopwatch
+      const startTime = Date.now();
       setElapsedTime(0);
       timerRef.current = setInterval(() => {
-        setElapsedTime((prev) => prev + 1);
-      }, 1000);
+        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+        setElapsedTime(elapsedSeconds);
+      }, 100); // Update more frequently for smoother display
 
       // Generate summary using selected model
       const res = await fetch("/api/generate-summary", {
@@ -151,7 +153,13 @@ export default function Home() {
         throw new Error(data.error || "Failed to generate summary");
       }
 
-      // Format elapsed time
+      // Stop the timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+
+      // Use the final elapsed time from state
       const minutes = Math.floor(elapsedTime / 60);
       const seconds = elapsedTime % 60;
       const formattedTime = `${minutes}m ${seconds}s`;
@@ -171,9 +179,6 @@ export default function Home() {
       setErrorMessage(`❌ Error: ${error.message}`);
     } finally {
       setLoading(false);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
     }
   };
 
