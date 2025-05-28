@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import Home from "../../pages/index";
 import { useSession } from "next-auth/react";
 import { act } from "react";
+import { useState } from "react";
 
 beforeAll(() => {
   jest.spyOn(console, "log").mockImplementation(() => {});
@@ -132,5 +133,56 @@ describe("Home Component", () => {
     expect(elapsedTimeElement.textContent).toMatch(/0m 3s/);
 
     jest.useRealTimers();
+  });
+
+  it("shows a section dropdown with headings after loading a Google Doc", async () => {
+    // Mock headings in the document
+    const mockParagraphs = [
+      "Heading 1: Project Alpha",
+      "Some content under Alpha.",
+      "Heading 2: Project Beta",
+      "Some content under Beta.",
+      "Heading 3: Project Gamma",
+      "Some content under Gamma."
+    ];
+
+    // Mock fetch for document loading
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      json: () => Promise.resolve({ paragraphs: mockParagraphs }),
+      ok: true
+    });
+
+    render(<Home />);
+
+    // The dropdown should NOT be present before loading
+    expect(screen.queryByLabelText("Select Section:")).toBeNull();
+
+    // Load document
+    const input = screen.getByPlaceholderText("Paste your Google Doc URL here");
+    await userEvent.type(input, "https://docs.google.com/document/d/123");
+    const loadButton = screen.getByText("📄 Load Document");
+    await userEvent.click(loadButton);
+
+    // Wait for the doc to be loaded
+    await waitFor(() => {
+      expect(
+        screen.getByText("✅ Google Doc retrieved successfully!")
+      ).toBeInTheDocument();
+    });
+
+    // The dropdown should now be present
+    const sectionDropdown = screen.getByLabelText("Select Section:");
+    expect(sectionDropdown).toBeInTheDocument();
+
+    // The dropdown should contain the headings
+    expect(
+      screen.getByRole("option", { name: /Project Alpha/ })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: /Project Beta/ })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: /Project Gamma/ })
+    ).toBeInTheDocument();
   });
 });
