@@ -5,6 +5,14 @@ import Home from "../../pages/index";
 import { useSession } from "next-auth/react";
 import { act } from "react-dom/test-utils";
 
+beforeAll(() => {
+  jest.spyOn(console, "log").mockImplementation(() => {});
+});
+
+afterAll(() => {
+  (console.log as jest.Mock).mockRestore();
+});
+
 // Mock fetch
 global.fetch = jest.fn(() =>
   Promise.resolve({

@@ -10,6 +10,14 @@ jest.mock("../../llm/providers", () => ({
   }
 }));
 
+beforeAll(() => {
+  jest.spyOn(console, "log").mockImplementation(() => {});
+});
+
+afterAll(() => {
+  (console.log as jest.Mock).mockRestore();
+});
+
 describe("generate-summary API", () => {
   it("should handle successful generation", async () => {
     const { req, res } = createMocks({
