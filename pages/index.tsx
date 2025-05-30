@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import Spinner from "./components/Spinner";
 import { staticInstructions } from "../utils/buildPrompt";
@@ -12,6 +12,37 @@ interface ModelOutput {
   elapsedTime: string;
 }
 
+// Custom hook for elapsed time
+function useElapsedTime(
+  isRunning: boolean
+): [number, (time: number) => void, number | null] {
+  const [elapsedTime, setElapsedTime] = useState<number>(0);
+  const [startTime, setStartTime] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (isRunning) {
+      const now = Date.now();
+      setStartTime(now);
+      setElapsedTime(0);
+
+      const intervalId = setInterval(() => {
+        const currentElapsed = Math.floor((Date.now() - now) / 1000);
+        setElapsedTime(currentElapsed);
+      }, 100);
+
+      return () => {
+        clearInterval(intervalId);
+        setStartTime(null);
+      };
+    } else {
+      setElapsedTime(0);
+      setStartTime(null);
+    }
+  }, [isRunning]);
+
+  return [elapsedTime, setElapsedTime, startTime];
+}
+
 export default function Home() {
   const { data: session, status } = useSession();
   const [docUrl, setDocUrl] = useState<string>("");
@@ -23,13 +54,13 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(false);
   const [batchProgress, setBatchProgress] = useState<number>(0);
   const [totalBatches, setTotalBatches] = useState<number>(0);
-  const [elapsedTime, setElapsedTime] = useState<number>(0);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [elapsedTime, setElapsedTime] = useElapsedTime(loading);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>("mistral");
   const [modelOutputs, setModelOutputs] = useState<ModelOutput[]>([]);
   const [selectedSection, setSelectedSection] = useState<string>("");
   const [headings, setHeadings] = useState<string[]>([]);
+  const generateStartTimeRef = useRef<number | null>(null);
 
   const extractDocId = (url: string): string | null => {
     const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -135,9 +166,9 @@ export default function Home() {
   };
   const generate = async () => {
     try {
+      generateStartTimeRef.current = Date.now();
       setLoading(true);
       setErrorMessage(null);
-      setElapsedTime(0);
 
       // Extract the selected section from all items
       const selectedSectionContent = extractSectionContent(
@@ -150,14 +181,6 @@ export default function Home() {
           `Could not find section "${selectedSection}" in the document`
         );
       }
-
-      // Start stopwatch
-      const startTime = Date.now();
-      setElapsedTime(0);
-      timerRef.current = setInterval(() => {
-        const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-        setElapsedTime(elapsedSeconds);
-      }, 100); // Update more frequently for smoother display
 
       // Generate summary using selected model
       const res = await fetch("/api/generate-summary", {
@@ -176,17 +199,17 @@ export default function Home() {
         throw new Error(data.error || "Failed to generate summary");
       }
 
-      // Stop the timer
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+      // Calculate elapsed time directly
+      const endTime = Date.now();
+      const startTime = generateStartTimeRef.current;
+      const finalElapsedTime = startTime
+        ? Math.floor((endTime - startTime) / 1000)
+        : 0;
+      console.log("finalElapsedTime", finalElapsedTime);
 
-      // Calculate elapsed time directly to avoid stale state
-      const elapsedMs = Date.now() - startTime;
-      const elapsedSeconds = Math.floor(elapsedMs / 1000);
-      const minutes = Math.floor(elapsedSeconds / 60);
-      const seconds = elapsedSeconds % 60;
+      // Calculate elapsed time for the output using the final elapsed time
+      const minutes = Math.floor(finalElapsedTime / 60);
+      const seconds = finalElapsedTime % 60;
       const formattedTime = `${minutes}m ${seconds}s`;
 
       // Add new output to the list
@@ -204,6 +227,7 @@ export default function Home() {
       setErrorMessage(`❌ Error: ${error.message}`);
     } finally {
       setLoading(false);
+      generateStartTimeRef.current = null;
     }
   };
 

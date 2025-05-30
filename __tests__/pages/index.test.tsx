@@ -66,8 +66,6 @@ describe("Home Component", () => {
     expect(modelSelect).toHaveValue("mistral");
   });
 
-  it("should show a non-zero elapsed time for the first model output", async () => {});
-
   it("shows a section dropdown with headings after loading a Google Doc", async () => {
     // Mock headings in the document
     (global.fetch as jest.Mock).mockImplementationOnce(() =>
@@ -114,5 +112,73 @@ describe("Home Component", () => {
 
     // Verify the first heading is selected by default
     expect(sectionSelect).toHaveValue("Introduction");
+  });
+
+  it("should show a non-zero elapsed time for the first model output", async () => {
+    // Mock the document fetch
+    (global.fetch as jest.Mock).mockImplementationOnce(() =>
+      Promise.resolve({
+        json: () =>
+          Promise.resolve({
+            paragraphs: ["heading 1: Test Section", "Some content"]
+          }),
+        ok: true
+      })
+    );
+
+    // Mock the generate-summary API call with a longer delay
+    (global.fetch as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => {
+            resolve({
+              json: () => Promise.resolve({ output: "Generated summary" }),
+              ok: true
+            });
+          }, 1000); // Use a longer delay to ensure elapsed time is non-zero
+        })
+    );
+
+    render(<Home />);
+
+    // Load the document
+    const input = screen.getByPlaceholderText("Paste your Google Doc URL here");
+    await userEvent.type(input, "https://docs.google.com/document/d/123");
+
+    const loadButton = screen.getByText("📄 Load Document");
+    await userEvent.click(loadButton);
+
+    // Wait for document to load
+    await waitFor(() => {
+      expect(
+        screen.getByText("✅ Google Doc retrieved successfully!")
+      ).toBeInTheDocument();
+    });
+
+    // Select a model
+    const modelSelect = screen.getByLabelText("Select Model:");
+    await userEvent.selectOptions(modelSelect, "mistral");
+
+    // Click generate button
+    const generateButton = screen.getByText("✨ Generate with Selected Model");
+    await userEvent.click(generateButton);
+
+    // Wait for loading state to appear
+    await waitFor(() => {
+      expect(screen.getByText("✨ Generating...")).toBeInTheDocument();
+    });
+
+    // Wait for loading state to complete and model output to appear
+    await waitFor(
+      () => {
+        expect(screen.queryByText("✨ Generating...")).not.toBeInTheDocument();
+        expect(screen.getByText("Generated summary")).toBeInTheDocument();
+      },
+      { timeout: 2000 }
+    );
+
+    // Check that elapsed time is greater than 0m 0s
+    const elapsedTimeSpan = screen.getByText(/⏱️ (?!0m 0s)\d+m \d+s/);
+    expect(elapsedTimeSpan).toBeInTheDocument();
   });
 });
